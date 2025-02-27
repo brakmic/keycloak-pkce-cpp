@@ -4,8 +4,8 @@
       "host": "0.0.0.0",
       "port": 18080,
       "ssl": {
-          "cert_path": "certs/client/pkce-client.cpp.crt",
-          "key_path": "certs/client/pkce-client.cpp.key",
+          "cert_path": "../certs/client/pkce-client.cpp.crt",
+          "key_path": "../certs/client/pkce-client.cpp.key",
           "verify_peer": false
       }
   },
