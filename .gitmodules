@@ -1,0 +1,30 @@
+[submodule "external/json"]
+	path = external/json
+	url = https://github.com/nlohmann/json
+[submodule "external/spdlog"]
+	path = external/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "external/cxxopts"]
+	path = external/cxxopts
+	url = https://github.com/jarro2783/cxxopts.git
+[submodule "external/civetweb"]
+	path = external/civetweb
+	url = https://github.com/civetweb/civetweb.git
+[submodule "external/googletest"]
+	path = external/googletest
+	url = https://github.com/google/googletest.git
+[submodule "external/Crow"]
+	path = external/Crow
+	url = https://github.com/CrowCpp/Crow
+[submodule "external/asio"]
+	path = external/asio
+	url = https://github.com/chriskohlhoff/asio.git
+[submodule "external/picosha2"]
+	path = external/picosha2
+	url = https://github.com/okdshin/PicoSHA2
+[submodule "external/fmt"]
+	path = external/fmt
+	url = https://github.com/fmtlib/fmt.git
+[submodule "external/cpr"]
+	path = external/cpr
+	url = https://github.com/libcpr/cpr.git

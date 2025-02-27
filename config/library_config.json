@@ -1,0 +1,32 @@
+{
+  "keycloak": {
+      "protocol": "https",
+      "host": "keycloak.local.com",
+      "port": 9443,
+      "realm": "TestRealm",
+      "client_id": "test-client",
+      "scopes": ["openid", "email", "profile"],
+      "ssl": {
+          "verify_peer": false,
+          "ca_cert_path": ""
+      }
+  },
+  "pkce": {
+      "state_store": {
+          "expiry_duration": 300,
+          "enable_cryptographic_verification": true,
+          "max_entries": 1000
+      },
+      "cookies": {
+          "path": "/",
+          "http_only": true,
+          "secure": true,
+          "domain": ".local.com",
+          "same_site": "None",
+          "max_age": 3600,
+          "access_token_name": "access_token",
+          "refresh_token_name": "refresh_token",
+          "id_token_name": "id_token"
+      }
+  }
+}

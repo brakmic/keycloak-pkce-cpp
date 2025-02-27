@@ -1,0 +1,25 @@
+{
+  "server": {
+      "protocol": "https",
+      "host": "0.0.0.0",
+      "port": 18080,
+      "ssl": {
+          "cert_path": "certs/client/pkce-client.local.com.crt",
+          "key_path": "certs/client/pkce-client.local.com.key",
+          "verify_peer": false
+      }
+  },
+  "proxy": {
+      "host": "host.docker.internal",
+      "port": 9443
+  },
+  "auth": {
+      "redirect_uri": "https://pkce-client.local.com:18080/auth/keycloak/callback"
+  },
+  "logging": {
+      "app_level": "debug",
+      "crow_level": "debug",
+      "console_logging": true,
+      "log_pattern": "[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [%t] %v"
+  }
+}
