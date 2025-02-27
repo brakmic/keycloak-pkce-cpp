@@ -26,7 +26,7 @@ PKCEWrapper::PKCEWrapper(const config::LibraryConfig& config)
 
 void PKCEWrapper::set_redirect_uri(const std::string& uri) {
     redirect_uri_ = uri;
-    strategy_ = std::make_shared<auth::PKCEStrategy>(
+    strategy_ = auth::PKCEStrategy::create(
         client_,
         config_.keycloak.client_id,
         redirect_uri_,

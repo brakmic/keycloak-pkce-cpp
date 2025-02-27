@@ -12,8 +12,10 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <memory>
+#include <utility>
 #include "pkce/pkce.hpp"
-#include "pkce/state_store.hpp"
+#include "keycloak/pkce/state_store.hpp"
 #include "keycloak/auth/strategy.hpp"
 #include "keycloak/auth/token_service.hpp"
 #include "keycloak/config/library_config.hpp"
@@ -22,32 +24,19 @@ namespace keycloak::auth {
 
 class PKCEStrategy : public IAuthenticationStrategy {
 public:
-    
-    /**
-     * @brief Creates a new PKCE authentication strategy instance
-     * @param token_service Token service for OAuth2 operations
-     * @param client_id OAuth2 client identifier
-     * @param redirect_uri OAuth2 redirect URI
-     * @param pkce_config PKCE-specific configuration
-     * @throws std::invalid_argument if token_service is null or parameters are invalid
-     * 
-     * Configuration includes:
-     * - Cookie settings for token storage
-     * - State store parameters
-     * - PKCE challenge method (S256)
-     */
-    PKCEStrategy(
+    static std::unique_ptr<PKCEStrategy> create(
         std::shared_ptr<ITokenService> token_service,
         std::string_view client_id,
         std::string_view redirect_uri,
-        const config::PKCEConfig& pkce_config)
-        : token_service_(token_service)
-        , client_id_(client_id)
-        , redirect_uri_(redirect_uri)
-        , cookie_config_(pkce_config.cookies)
-        , state_store_(pkce_config.state_store)
-    {}
-    
+        const config::PKCEConfig& pkce_config,
+        std::unique_ptr<pkce::IStateStore> state_store = nullptr) {
+        if (!state_store) {
+            state_store = std::make_unique<pkce::StateStore>(pkce_config.state_store);
+        }
+        return std::unique_ptr<PKCEStrategy>(new PKCEStrategy(
+            token_service, client_id, redirect_uri, pkce_config, std::move(state_store)));
+    }
+
     /**
      * @brief Generates the authorization URL with PKCE parameters
      * @return Complete URL for initiating the OAuth2 PKCE flow
@@ -95,11 +84,36 @@ public:
     const config::CookieConfig& get_cookie_config() const override { return cookie_config_; }
 
 private:
-    std::shared_ptr<ITokenService> token_service_;  ///< OAuth2 token operations
-    std::string client_id_;                         ///< OAuth2 client identifier
-    std::string redirect_uri_;                      ///< OAuth2 redirect URI
-    const config::CookieConfig& cookie_config_;     ///< Cookie settings
-    pkce::StateStore state_store_;                  ///< PKCE state management
+/**
+     * @brief Creates a new PKCE authentication strategy instance
+     * @param token_service Token service for OAuth2 operations
+     * @param client_id OAuth2 client identifier
+     * @param redirect_uri OAuth2 redirect URI
+     * @param pkce_config PKCE-specific configuration
+     * @throws std::invalid_argument if token_service is null or parameters are invalid
+     * 
+     * Configuration includes:
+     * - Cookie settings for token storage
+     * - State store parameters
+     * - PKCE challenge method (S256)
+     */
+     PKCEStrategy(
+        std::shared_ptr<ITokenService> token_service,
+        std::string_view client_id,
+        std::string_view redirect_uri,
+        const config::PKCEConfig& pkce_config,
+        std::unique_ptr<pkce::IStateStore> state_store)
+        : token_service_(token_service)
+        , client_id_(client_id)
+        , redirect_uri_(redirect_uri)
+        , cookie_config_(pkce_config.cookies)
+        , state_store_(std::move(state_store))
+    {}
+    std::shared_ptr<ITokenService> token_service_;      ///< OAuth2 token operations
+    std::string client_id_;                             ///< OAuth2 client identifier
+    std::string redirect_uri_;                          ///< OAuth2 redirect URI
+    const config::CookieConfig& cookie_config_;         ///< Cookie settings
+    std::unique_ptr<pkce::IStateStore> state_store_;    ///< PKCE state management
 };
 
 } // namespace keycloak::auth

@@ -6,7 +6,7 @@ namespace keycloak::auth {
 
 std::string PKCEStrategy::create_authorization_url() {
     auto [code_verifier, code_challenge] = pkce::generate_pkce_pair();
-    auto state = state_store_.create_state(code_verifier);
+    auto state = state_store_->create(code_verifier);
 
     // Join scopes with space separator
     const auto& scopes = token_service_->get_scopes();
@@ -37,7 +37,7 @@ TokenResponse PKCEStrategy::handle_callback(
     std::string_view code, 
     std::string_view state)
 {
-    auto code_verifier = state_store_.verify_and_consume(state);
+    auto code_verifier = state_store_->verify(state);
     if (code_verifier.empty()) {
         TokenResponse error;
         error.error = "invalid_state";

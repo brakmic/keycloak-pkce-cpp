@@ -113,7 +113,7 @@ std::shared_ptr<auth::IAuthenticationStrategy> KeycloakClient::create_pkce_strat
 {
     auto token_service = KeycloakClient::create(config.keycloak, proxy_config, logger);
 
-    return std::make_shared<auth::PKCEStrategy>(
+    return auth::PKCEStrategy::create(
         token_service,
         config.keycloak.client_id,
         redirect_uri,
