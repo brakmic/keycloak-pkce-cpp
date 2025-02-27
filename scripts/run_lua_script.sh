@@ -66,8 +66,8 @@ fi
 
 # Set up environment
 cd ${LUA_DIR}
-export LD_LIBRARY_PATH="../:$LD_LIBRARY_PATH"
-export KC_PKCE_LIB="../libkc_pkce.so"
+export LD_LIBRARY_PATH="../c/lib:$LD_LIBRARY_PATH"
+export KC_PKCE_LIB="../c/lib/libkc_pkce.so"
 
 # Run the Lua script
 if [ $DEBUG -eq 1 ]; then

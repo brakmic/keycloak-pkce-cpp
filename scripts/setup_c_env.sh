@@ -5,19 +5,20 @@ set -e
 # Script directory and path definitions
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 BUILD_DIR="${SCRIPT_DIR}/../build"
-CONFIG_DIR="${BUILD_DIR}/config"
-CERTS_DIR="${BUILD_DIR}/certs/client"
-LOGS_DIR="${BUILD_DIR}/logs"
+C_DIR="${BUILD_DIR}/c"
+CONFIG_DIR="${C_DIR}/config"
+CERTS_DIR="${C_DIR}/certs"
+LOGS_DIR="${C_DIR}/logs"
 
 # Certificate paths
-SSL_KEY="${CERTS_DIR}/pkce-client.key"
-SSL_PEM="${CERTS_DIR}/pkce-client.pem"
-SSL_CA="${CERTS_DIR}/ca.pem"
+SSL_KEY="${CERTS_DIR}/client/pkce-client.c.key"
+SSL_PEM="${CERTS_DIR}/client/pkce-client.c.pem"
+SSL_CA="${CERTS_DIR}/client/ca.pem"
 
 echo "Setting up C demo environment..."
 
 # Create all necessary directories
-mkdir -p "${CONFIG_DIR}" "${CERTS_DIR}" "${LOGS_DIR}"
+mkdir -p "${CONFIG_DIR}" "${CERTS_DIR}/client" "${LOGS_DIR}"
 
 # Generate SSL certificate in PEM format for CivetWeb
 if [ ! -f "${SSL_PEM}" ]; then
@@ -29,20 +30,20 @@ if [ ! -f "${SSL_PEM}" ]; then
     
     # Generate self-signed certificate and combine with key into PEM
     openssl req -new -x509 -key "${SSL_KEY}" \
-        -out "${CERTS_DIR}/pkce-client.crt" \
+        -out "${CERTS_DIR}/client/pkce-client.c.crt" \
         -days 365 \
         -subj "/C=DE/ST=Nordrhein-Westfalen/L=Bonn/O=Brakmic GmbH/CN=localhost" \
         -addext "subjectAltName=DNS:localhost,DNS:pkce-client.local.com,DNS=pkce-client"
 
     # Combine key and certificate into single PEM file (required by CivetWeb)
-    cat "${SSL_KEY}" "${CERTS_DIR}/pkce-client.crt" > "${SSL_PEM}"
+    cat "${SSL_KEY}" "${CERTS_DIR}/client/pkce-client.c.crt" > "${SSL_PEM}"
     
     # Set proper permissions
     chmod 600 "${SSL_PEM}"
     chmod 600 "${SSL_KEY}"
     
     # Clean up intermediate files
-    rm -f "${CERTS_DIR}/pkce-client.crt"
+    rm -f "${CERTS_DIR}/client/pkce-client.c.crt"
     
     echo "SSL certificate generated successfully"
 fi
@@ -58,7 +59,7 @@ listening_ports 18080s
 enable_auth_domain_check no
 
 # SSL/TLS configuration
-ssl_certificate certs/client/pkce-client.pem
+ssl_certificate ${CERTS_DIR}/client/pkce-client.c.pem
 ssl_protocol_version 3
 ssl_verify_peer no
 ssl_cipher_list ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256
@@ -88,7 +89,7 @@ access_control_expose_headers Content-Length,Content-Range
 EOF
 
 # Create web root directory
-mkdir -p "${BUILD_DIR}/www"
+mkdir -p "${C_DIR}/www"
 
 # Create basic library configuration if it doesn't exist
 if [ ! -f "${CONFIG_DIR}/library_config.json" ]; then
@@ -145,6 +146,6 @@ echo "To build and run the demo:"
 echo "1. cd ${BUILD_DIR}"
 echo "2. cmake .."
 echo "3. make"
-echo "4. ./pkce_demo_c"
+echo "4. ${C_DIR}/bin/pkce_demo_c"
 echo
 echo "The server will be available at https://localhost:18080"
