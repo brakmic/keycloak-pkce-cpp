@@ -41,7 +41,18 @@ file(GLOB_RECURSE WRAPPER_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/internal/*.cpp"
 )
 
-target_sources(kc_pkce PRIVATE ${WRAPPER_SOURCES})
+# Append external sources
+list(APPEND EXTERNAL_SOURCES
+    "${CMAKE_SOURCE_DIR}/external/b64.c/buffer.c"
+    "${CMAKE_SOURCE_DIR}/external/b64.c/decode.c"
+    "${CMAKE_SOURCE_DIR}/external/cJSON/cJSON.c"
+)
+
+target_sources(kc_pkce
+    PRIVATE
+        ${WRAPPER_SOURCES}
+        ${EXTERNAL_SOURCES}
+)
 
 target_include_directories(kc_pkce
     PUBLIC
@@ -56,7 +67,7 @@ target_include_directories(kc_pkce
         ${CMAKE_SOURCE_DIR}/external/asio/asio/include
 )
 
-target_link_libraries(kc_pkce 
+target_link_libraries(kc_pkce
     PRIVATE 
         KeycloakPKCE::Lib
         fmt::fmt
@@ -92,6 +103,8 @@ target_include_directories(pkce_demo_c
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/external/civetweb/include
+        ${CMAKE_SOURCE_DIR}/external/cJSON
+        ${CMAKE_SOURCE_DIR}/external/b64.c
 )
 
 target_link_libraries(pkce_demo_c
