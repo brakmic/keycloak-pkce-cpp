@@ -13,14 +13,14 @@ project(KeycloakPKCE
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Define build types (Debug, Release, RelWithDebInfo, MinSizeRel)
+# Define build types
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
 endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-# Set compiler flags for different build types
+# Compiler flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 
@@ -80,7 +80,7 @@ set(BUILD_GMOCK OFF CACHE BOOL "Disable GMock")
 set(INSTALL_GTEST OFF CACHE BOOL "Disable installation of GTest")
 add_subdirectory(external/googletest EXCLUDE_FROM_ALL)
 
-# CPR configuration for integration and E2E tests
+# CPR for integration and E2E tests
 set(CPR_BUILD_TESTS OFF CACHE BOOL "Disable CPR tests")
 set(CPR_BUILD_TESTS_SSL OFF CACHE BOOL "Disable CPR SSL tests")
 set(CPR_ENABLE_SSL ON CACHE BOOL "Enable SSL in CPR")
@@ -90,7 +90,10 @@ add_subdirectory(external/cpr EXCLUDE_FROM_ALL)
 # Enable testing
 enable_testing()
 
-# C++ Library
+# Create main lib directory
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+# Core C++ Library
 add_library(keycloak_pkce SHARED)
 add_library(KeycloakPKCE::Lib ALIAS keycloak_pkce)
 
@@ -100,17 +103,19 @@ file(GLOB_RECURSE LIB_SOURCES
 
 target_sources(keycloak_pkce PRIVATE ${LIB_SOURCES})
 
+# Set output directory for the core library
+set_target_properties(keycloak_pkce
+    PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+)
+
 target_include_directories(keycloak_pkce
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/include>
         $<INSTALL_INTERFACE:include>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/fmt/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/json/single_include
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/picosha2
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/spdlog/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/asio/asio/include
 )
 
 target_link_libraries(keycloak_pkce
@@ -126,130 +131,14 @@ target_link_libraries(keycloak_pkce
 
 target_compile_definitions(keycloak_pkce PRIVATE ASIO_STANDALONE)
 
-# CivetWeb configuration
-set(DOWNLOAD_EXTRACT_TIMESTAMP TRUE CACHE BOOL "")
-set(CIVETWEB_ENABLE_CXX OFF CACHE BOOL "Disable CivetWeb C++ API")
-set(CIVETWEB_ENABLE_SERVER_EXECUTABLE OFF CACHE BOOL "Disable CivetWeb server executable")
-set(CIVETWEB_ENABLE_SSL ON CACHE BOOL "Enable SSL support")
-set(CIVETWEB_BUILD_TESTING OFF CACHE BOOL "Disable CivetWeb testing")
-
-# Set OpenSSL API version for CivetWeb
-if(OPENSSL_VERSION VERSION_GREATER_EQUAL "3.0.0")
-    set(CIVETWEB_SSL_OPENSSL_API_3_0 ON CACHE INTERNAL "")
-    set(CIVETWEB_SSL_OPENSSL_API_1_1 OFF CACHE INTERNAL "")
-else()
-    set(CIVETWEB_SSL_OPENSSL_API_3_0 OFF CACHE INTERNAL "")
-    set(CIVETWEB_SSL_OPENSSL_API_1_1 ON CACHE INTERNAL "")
-endif()
-
-add_subdirectory(external/civetweb)
-
-if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(civetweb-c-library
-        PRIVATE -w
-    )
-endif()
-
-# C Wrapper Library
-add_library(kc_pkce SHARED)
-add_library(KeycloakPKCE::C ALIAS kc_pkce)
-
-file(GLOB_RECURSE WRAPPER_SOURCES 
-    "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/c/internal/*.cpp"
-)
-
-target_sources(kc_pkce PRIVATE ${WRAPPER_SOURCES})
-
-target_include_directories(kc_pkce
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/wrappers/c/include>
-        $<INSTALL_INTERFACE:include>
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/c/internal
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/json/single_include
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/fmt/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/spdlog/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/asio/asio/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/picosha2
-)
-
-target_link_libraries(kc_pkce PRIVATE KeycloakPKCE::Lib json)
-
-# Example C program
-file(GLOB_RECURSE DEMO_C_SOURCES 
-    "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/c/examples/basic/*.c"
-)
-
-add_executable(pkce_demo_c ${DEMO_C_SOURCES})
-
-set_target_properties(pkce_demo_c PROPERTIES
-    C_STANDARD 99
-    C_STANDARD_REQUIRED ON
-)
-
-target_include_directories(pkce_demo_c
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/civetweb/include
-        ${OPENSSL_INCLUDE_DIR}
-)
-
-target_link_libraries(pkce_demo_c
-    PRIVATE
-        KeycloakPKCE::C
-        civetweb-c-library
-        ${CMAKE_DL_LIBS}
-)
-
 # Tests
 add_subdirectory(tests)
 
-# Installation
-include(GNUInstallDirs)
+# Language bindings (C must be first as others depend on it)
+add_subdirectory(wrappers/c)
+add_subdirectory(wrappers/python)
 
-install(TARGETS keycloak_pkce kc_pkce
-    EXPORT KeycloakPKCETargets
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
-
-install(DIRECTORY wrappers/c/include/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    FILES_MATCHING PATTERN "*.h"
-)
-
-install(EXPORT KeycloakPKCETargets
-    FILE KeycloakPKCETargets.cmake
-    NAMESPACE KeycloakPKCE::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/KeycloakPKCE
-)
-
-# Configuration files
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/app_config.json
-               ${CMAKE_CURRENT_BINARY_DIR}/config/app_config.json COPYONLY)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/library_config.json
-               ${CMAKE_CURRENT_BINARY_DIR}/config/library_config.json COPYONLY)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/civetweb.conf
-               ${CMAKE_CURRENT_BINARY_DIR}/config/civetweb.conf COPYONLY)
-
-# Certificates
-add_custom_target(copy_certificates_c_demo ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/certs/client"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_SOURCE_DIR}/certs/client/pkce-client.pem"
-        "${CMAKE_BINARY_DIR}/certs/client/pkce-client.pem"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_SOURCE_DIR}/certs/client/pkce-client.key"
-        "${CMAKE_BINARY_DIR}/certs/client/pkce-client.key"
-    COMMENT "Copying PEM Certificates to build directory"
-    VERBATIM
-)
-
-add_dependencies(pkce_demo_c copy_certificates_c_demo)
-
-# Lua support
+# Lua support (depends on C wrapper)
 find_package(PkgConfig REQUIRED)
 if(PKG_CONFIG_FOUND)
     pkg_check_modules(LUAJIT luajit)
@@ -261,5 +150,22 @@ if(PKG_CONFIG_FOUND)
     endif()
 endif()
 
-# Python support
-add_subdirectory(wrappers/python)
+# Installation
+include(GNUInstallDirs)
+
+install(TARGETS keycloak_pkce
+    EXPORT KeycloakPKCETargets
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(EXPORT KeycloakPKCETargets
+    FILE KeycloakPKCETargets.cmake
+    NAMESPACE KeycloakPKCE::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/KeycloakPKCE
+)
+
+# Configuration files
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/library_config.json
+               ${CMAKE_CURRENT_BINARY_DIR}/config/library_config.json COPYONLY)
