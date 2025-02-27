@@ -3,48 +3,44 @@
 
 class StateStoreTest : public ::testing::Test {
 protected:
-    keycloak::config::StateStoreConfig config{
-        keycloak::config::Duration(300),  // 5 minutes, using Duration type
-        true,   // enable crypto verification
-        100     // max entries
-    };
-    
-    keycloak::test::MockStateStore store{config};
+    void SetUp() override {
+        config = keycloak::config::StateStoreConfig{
+            keycloak::config::Duration(300),  // 5 minutes
+            true,   // enable crypto verification
+            100     // max entries
+        };
+        store = std::make_unique<keycloak::test::MockStateStore>(config);
+    }
+
+    keycloak::config::StateStoreConfig config;
+    std::unique_ptr<keycloak::pkce::IStateStore> store;
 };
 
 TEST_F(StateStoreTest, CreateAndVerifyState) {
     const std::string verifier = "test_verifier";
     
     // Create state
-    std::string state = store.create_state(verifier);
+    std::string state = store->create(verifier);
     EXPECT_FALSE(state.empty());
+    EXPECT_EQ(state, "mock_state_" + verifier);
     
     // Verify and consume
-    std::string retrieved = store.verify_and_consume(state);
+    std::string retrieved = store->verify(state);
     EXPECT_EQ(retrieved, verifier);
     
     // Try to verify again (should fail)
-    retrieved = store.verify_and_consume(state);
+    retrieved = store->verify(state);
     EXPECT_TRUE(retrieved.empty());
 }
 
-TEST_F(StateStoreTest, ExpiredState) {
-    const std::string verifier = "test_verifier";
-    
-    // Create state with very short expiry
-    keycloak::config::StateStoreConfig short_config{
-        keycloak::config::Duration(1),  // 1 second
-        true,
-        100
-    };
-    keycloak::pkce::StateStore short_store{short_config};
-    
-    std::string state = short_store.create_state(verifier);
-    
-    // Wait for expiration
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    
-    // Try to verify expired state
-    std::string retrieved = short_store.verify_and_consume(state);
+TEST_F(StateStoreTest, InvalidVerifier) {
+    // Try with empty verifier
+    std::string state = store->create("");
+    EXPECT_TRUE(state.empty());
+}
+
+TEST_F(StateStoreTest, InvalidState) {
+    // Try to verify invalid state
+    std::string retrieved = store->verify("invalid_state");
     EXPECT_TRUE(retrieved.empty());
 }

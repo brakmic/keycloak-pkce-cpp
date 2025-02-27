@@ -21,29 +21,30 @@ public:
     }
 
     TokenResponse handle_callback(
-        std::string_view code [[maybe_unused]], 
+        std::string_view code, 
         std::string_view state) override {
         TokenResponse response;
         
-        if (state == "invalid-state") {
-            response.error = "invalid_state";
-            response.error_description = "State parameter validation failed";
+        if (state == "mock_state" && code == "valid_code") {
+            response.access_token = "mock_access";
+            response.refresh_token = "mock_refresh";
+            response.id_token = "mock_id";
+            response.token_type = "Bearer";
+            response.expires_in = 300;  // 5 minutes
+            response.refresh_expires_in = 1800;  // 30 minutes
             return response;
         }
 
-        response.access_token = "mock_access";
-        response.refresh_token = "mock_refresh";
-        response.id_token = "mock_id";
-        response.token_type = "Bearer";
-        response.expires_in = 300;  // 5 minutes
-        response.refresh_expires_in = 1800;  // 30 minutes
+        response.error = "invalid_grant";
+        response.error_description = "Invalid state or code";
         return response;
     }
 
     bool validate_session(
         const std::unordered_map<std::string, std::string>& cookies) override {
         auto it = cookies.find(cookie_config_.access_token_name);
-        return it != cookies.end() && it->second != "invalid_token";
+        if (it == cookies.end()) return false;
+        return it->second == "mock_access"; // Only validate against the mock token
     }
 
     const config::CookieConfig& get_cookie_config() const override {
