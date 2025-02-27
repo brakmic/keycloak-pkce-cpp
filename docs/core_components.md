@@ -79,11 +79,6 @@ public:
 Manages PKCE state and CSRF protection:
 
 ```cpp
-## State Management
-
-Manages PKCE state and CSRF protection:
-
-```cpp
 namespace keycloak::pkce {
     class IStateStore {
     public:
