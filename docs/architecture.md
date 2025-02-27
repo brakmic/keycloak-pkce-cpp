@@ -41,12 +41,19 @@ keycloak::http::ProxyConfig
 ```
 
 ### State Management
-- Thread-safe state store
-- CSRF protection
-- PKCE code verifier management
+- Thread-safe state store interface
+- Default implementation with cryptographic verification
+- Mock implementation for testing
 ```cpp
-keycloak::pkce::StateStore
+keycloak::pkce::IStateStore    // Interface
+keycloak::pkce::StateStore     // Default implementation
+keycloak::test::MockStateStore // Test implementation
 ```
+#### The state store hierarchy provides:
+
+* Abstract interface for dependency injection
+* Thread-safe default implementation
+* Testable design through mocking
 
 ## Data Flow
 

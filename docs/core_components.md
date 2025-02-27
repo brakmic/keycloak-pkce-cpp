@@ -79,16 +79,24 @@ public:
 Manages PKCE state and CSRF protection:
 
 ```cpp
+## State Management
+
+Manages PKCE state and CSRF protection:
+
+```cpp
 namespace keycloak::pkce {
-    class StateStore {
+    class IStateStore {
+    public:
+        virtual ~IStateStore() = default;
+        virtual std::string create(std::string_view code_verifier) = 0;
+        virtual std::string verify(std::string_view state) = 0;
+    };
+
+    class StateStore : public IStateStore {
     public:
         explicit StateStore(const config::StateStoreConfig& config);
-        
-        // Creates new state entry with code verifier
-        std::string create_state(std::string_view code_verifier);
-        
-        // Validates state and returns associated verifier
-        std::string verify_and_consume(std::string_view state);
+        std::string create(std::string_view code_verifier) override;
+        std::string verify(std::string_view state) override;
     private:
         std::unordered_map<std::string, StateEntry> store_;
         mutable std::shared_mutex mutex_;
