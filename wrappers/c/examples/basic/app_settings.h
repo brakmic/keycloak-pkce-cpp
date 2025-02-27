@@ -78,8 +78,10 @@ static const struct AppSettings DEFAULT_APP_SETTINGS = {
         .log_pattern = "[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [%t] %v"
     },
     .paths = {
-        .library_config = "config/library_config.json",
-        .civetweb_config = "config/civetweb.conf"
+        // assume demo is in ./build/c/bin/pkce_demo_c
+        // check scripts/setup_c_env.sh
+        .library_config = "../config/library_config.json",
+        .civetweb_config = "../config/civetweb.conf"
     }
 };
 
