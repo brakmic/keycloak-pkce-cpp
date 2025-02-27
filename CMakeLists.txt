@@ -134,6 +134,9 @@ target_compile_definitions(keycloak_pkce PRIVATE ASIO_STANDALONE)
 # Tests
 add_subdirectory(tests)
 
+# C++ demo
+add_subdirectory(examples/cpp)
+
 # Language bindings (C must be first as others depend on it)
 add_subdirectory(wrappers/c)
 add_subdirectory(wrappers/python)
