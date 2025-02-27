@@ -28,3 +28,9 @@
 [submodule "external/cpr"]
 	path = external/cpr
 	url = https://github.com/libcpr/cpr.git
+[submodule "external/cJSON"]
+	path = external/cJSON
+	url = https://github.com/DaveGamble/cJSON.git
+[submodule "external/b64.c"]
+	path = external/b64.c
+	url = https://github.com/littlstar/b64.c.git
