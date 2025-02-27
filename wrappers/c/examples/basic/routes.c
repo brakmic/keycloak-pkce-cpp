@@ -1,5 +1,6 @@
 #include "routes.h"
 #include "context.h"
+#include "helpers.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -144,6 +145,8 @@ int handle_callback(struct mg_connection* conn, void* cbdata) {
 
 int handle_protected(struct mg_connection* conn, void* cbdata) {
     (void)cbdata;
+    
+    // Check if we have any cookies
     const char* cookie_header = mg_get_header(conn, "Cookie");
     if (!cookie_header) {
         mg_printf(conn,
@@ -152,7 +155,7 @@ int handle_protected(struct mg_connection* conn, void* cbdata) {
         return 1;
     }
 
-    // Extract token from cookie
+    // Extract the session token from cookies
     char cookie_value[4096] = {0};
     if (mg_get_cookie(cookie_header, "KC_SESSION", 
                       cookie_value, sizeof(cookie_value)) <= 0) {
@@ -162,31 +165,95 @@ int handle_protected(struct mg_connection* conn, void* cbdata) {
         return 1;
     }
 
-    // Debug token
-    printf("Validating token: %s\n", cookie_value);
-
-    // Validate access token from cookie
+    // Validate the session token
     bool valid = kc_pkce_validate_session(g_context.pkce, cookie_value);
     set_security_headers(conn);
 
     if (!valid) {
-        printf("Token validation failed\n");
         mg_printf(conn,
             "HTTP/1.1 302 Found\r\n"
             "Location: /auth/error?error=invalid_token\r\n\r\n");
         return 1;
     }
 
-    // Token is valid, show protected content
+    // Decode JWT claims
+    cJSON* claims = decode_jwt_payload(cookie_value);
+    if (!claims) {
+        // If we can't decode the JWT, show a basic success page
+        mg_printf(conn,
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/html; charset=utf-8\r\n\r\n"
+            "<html><body>"
+            "<h1>Protected Resource</h1>"
+            "<p>Successfully authenticated, but couldn't decode JWT claims.</p>"
+            "<p><a href='/'>Return to Home</a></p>"
+            "</body></html>");
+        return 1;
+    }
+
+    // Start HTML response with CSS styling for the table
     mg_printf(conn,
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: text/html; charset=utf-8\r\n\r\n"
-        "<html><body>"
-        "<h1>Protected Resource</h1>"
-        "<p>Successfully authenticated!</p>"
-        "<hr>"
+        "<html><head><style>"
+        "table { border-collapse: collapse; width: 100%%; }"
+        "th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }"
+        "th { background-color: #f2f2f2; }"
+        "</style></head><body>"
+        "<h1>Protected Resource</h1>");
+
+    // Extract username from claims, fallback to 'sub' if not found
+    const cJSON* username = cJSON_GetObjectItem(claims, "preferred_username");
+    if (!username) username = cJSON_GetObjectItem(claims, "sub");
+    mg_printf(conn, "<h2>Welcome %s!</h2>\n", 
+        username ? username->valuestring : "Anonymous");
+
+    // Start the claims table
+    mg_printf(conn,
+        "<h3>Your JWT Claims:</h3>"
+        "<table><tr><th>Claim</th><th>Value</th></tr>");
+
+    // Iterate through all claims in the JWT
+    for (const cJSON* item = claims->child; item; item = item->next) {
+        mg_printf(conn, "<tr><td>%s</td><td>", item->string);
+        
+        // Handle different JSON value types appropriately
+        switch (item->type) {
+            case cJSON_String:
+                mg_printf(conn, "%s", item->valuestring);
+                break;
+            case cJSON_Number:
+                mg_printf(conn, "%g", item->valuedouble);
+                break;
+            case cJSON_True:
+                mg_printf(conn, "true");
+                break;
+            case cJSON_False:
+                mg_printf(conn, "false");
+                break;
+            case cJSON_Array:
+            case cJSON_Object:
+                {
+                    // For complex types, print the JSON representation
+                    char* str = cJSON_Print(item);
+                    mg_printf(conn, "%s", str);
+                    free(str);
+                }
+                break;
+            default:
+                mg_printf(conn, "null");
+        }
+        mg_printf(conn, "</td></tr>\n");
+    }
+
+    // Close the HTML document
+    mg_printf(conn,
+        "</table>"
         "<p><a href='/'>Return to Home</a></p>"
         "</body></html>");
+
+    // Clean up
+    cJSON_Delete(claims);
     return 1;
 }
 
