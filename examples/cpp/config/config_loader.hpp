@@ -16,7 +16,7 @@
 #include <filesystem>
 #include <fstream>
 #include <cstdlib>
-#include "utils/logging.hpp"
+#include "keycloak/utils/logging.hpp"
 #include <cxxopts.hpp>
 
 namespace app::config {

@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file app_context.hpp
  * @brief Application Context Management for Demo Application
