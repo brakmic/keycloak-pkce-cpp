@@ -47,6 +47,9 @@ add_custom_target(copy_lua_files ALL
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/nginx.conf
         ${CMAKE_BINARY_DIR}/lua/nginx.conf
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${CMAKE_CURRENT_SOURCE_DIR}/mime.types
+        ${CMAKE_BINARY_DIR}/lua/mime.types
 
     COMMENT "Copying Lua files and dependencies"
     VERBATIM
