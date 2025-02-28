@@ -36,6 +36,6 @@ A C++ library implementing OAuth2 PKCE (Proof Key for Code Exchange) authenticat
 
 ### 5. Development
 - [Building from Source](./docs/building.md)
-- Running Tests
+- [Running Tests](./docs/testing.md)
 - Contributing Guidelines
 - Code Style Guide
