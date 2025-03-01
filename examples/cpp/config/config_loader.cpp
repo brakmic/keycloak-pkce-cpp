@@ -1,3 +1,4 @@
+#include <ranges>
 #include "config_loader.hpp"
 
 namespace app::config {
@@ -130,13 +131,11 @@ void ConfigLoader::validate_config(const AppConfig& config) {
         "trace", "debug", "info", "warning", "error", "critical"
     };
     
-    if (std::find(valid_levels.begin(), valid_levels.end(), 
-                  config.logging.app_level) == valid_levels.end()) {
+    if (!std::ranges::contains(valid_levels, config.logging.app_level)) {
         throw std::runtime_error("Invalid application log level: " + config.logging.app_level);
     }
-    
-    if (std::find(valid_levels.begin(), valid_levels.end(), 
-                  config.logging.crow_level) == valid_levels.end()) {
+
+    if (!std::ranges::contains(valid_levels, config.logging.crow_level)) {
         throw std::runtime_error("Invalid Crow log level: " + config.logging.crow_level);
     }
 }
