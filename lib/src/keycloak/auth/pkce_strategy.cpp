@@ -11,12 +11,9 @@ std::string PKCEStrategy::create_authorization_url() {
 
     // Join scopes with space separator
     const auto& scopes = token_service_->get_scopes();
-    std::string scope_string = scopes.empty() ? "" : 
-    std::accumulate(std::ranges::next(scopes.begin()), scopes.end(),
-        scopes[0],
-        [](const std::string& acc, const std::string& scope) {
-            return fmt::format("{} {}", acc, scope);
-        });
+    std::string scope_string = scopes
+        | std::views::join_with(' ')
+        | std::ranges::to<std::string>();
 
     return fmt::format("{}?"
         "response_type=code&"
