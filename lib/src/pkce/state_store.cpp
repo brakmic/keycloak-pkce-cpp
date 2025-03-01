@@ -13,6 +13,7 @@
 #include <shared_mutex>
 #include <mutex>
 #include <chrono>
+#include <ranges>
 #include "pkce.hpp"
 #include "picosha2.h"
 #include "keycloak/config/library_config.hpp"
@@ -129,8 +130,8 @@ void StateStore::cleanup_oldest() {
         entries.emplace_back(state, entry.expiry);
     }
 
-    std::sort(entries.begin(), entries.end(),
-        [](const auto& a, const auto& b) { return a.second < b.second; });
+    std::ranges::sort(entries, {}, &std::pair<std::string,
+        std::chrono::system_clock::time_point>::second);
 
     for (size_t i = 0; i < to_remove && i < entries.size(); ++i) {
         store_.erase(entries[i].first);
