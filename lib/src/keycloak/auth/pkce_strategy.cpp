@@ -1,3 +1,4 @@
+#include <ranges>
 #include <fmt/format.h>
 #include "keycloak/auth/pkce_strategy.hpp"
 #include "keycloak/utils/url_encode.hpp"
@@ -11,7 +12,7 @@ std::string PKCEStrategy::create_authorization_url() {
     // Join scopes with space separator
     const auto& scopes = token_service_->get_scopes();
     std::string scope_string = scopes.empty() ? "" : 
-    std::accumulate(std::next(scopes.begin()), scopes.end(),
+    std::accumulate(std::ranges::next(scopes.begin()), scopes.end(),
         scopes[0],
         [](const std::string& acc, const std::string& scope) {
             return fmt::format("{} {}", acc, scope);
