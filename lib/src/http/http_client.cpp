@@ -121,9 +121,9 @@ HttpClient::Response HttpClient::send_request(
         request_stream << method << " " << path << " HTTP/1.1\r\n";
         request_stream << "Host: " << host << ":" << port << "\r\n";
         
-        for (const auto& [name, value] : headers) {
-            request_stream << name << ": " << value << "\r\n";
-        }
+        std::ranges::for_each(headers, [&request_stream](const auto& pair) {
+            request_stream << pair.first << ": " << pair.second << "\r\n";
+        });
         
         if (!body.empty()) {
             request_stream << "Content-Type: application/x-www-form-urlencoded\r\n";
