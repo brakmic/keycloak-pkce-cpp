@@ -102,26 +102,103 @@ namespace keycloak::pkce {
 
 ## HTTP Client
 
-Handles secure communication with Keycloak:
+Handles secure communication with Keycloak through a flexible transport layer:
 
 ```cpp
 namespace keycloak::http {
+    // Transport interface hierarchy
+    class ITransport {
+    public:
+        virtual ~ITransport() = default;
+        virtual Response send_request(
+            std::string_view host,
+            std::string_view port, 
+            std::string_view method,
+            std::string_view path,
+            std::string_view body,
+            const std::unordered_map<std::string, std::string>& headers) = 0;
+    };
+    
+    class ISecureTransport : virtual public ITransport {
+    public:
+        virtual ~ISecureTransport() = default;
+        virtual void configure_ssl(const SSLConfig& config) = 0;
+    };
+    
+    class IProxyAware : virtual public ITransport {
+    public:
+        virtual ~IProxyAware() = default;
+        virtual void configure_proxy(const ProxyConfig& config) = 0;
+    };
+    
+    // HttpClient implementation
     class HttpClient {
     public:
-        struct Response {
-            int status_code;
-            std::string body;
-            std::unordered_map<std::string, std::string> headers;
-        };
-
-        static Response post(
+        // Factory methods for common client types
+        static std::shared_ptr<HttpClient> create(std::unique_ptr<ITransport> transport);
+        static std::shared_ptr<HttpClient> create_https_client(
+            const SSLConfig& ssl_config = {},
+            const ProxyConfig& proxy_config = {});
+        static std::shared_ptr<HttpClient> create_http_client(
+            const ProxyConfig& proxy_config = {});
+        
+        // HTTP operations
+        Response post(
             std::string_view host,
             std::string_view port,
             std::string_view path,
             std::string_view body,
-            const std::unordered_map<std::string, std::string>& headers,
-            const SSLConfig& ssl_config,
-            const ProxyConfig& proxy_config);
+            const std::unordered_map<std::string, std::string>& headers);
+            
+        // Access to underlying transport
+        std::shared_ptr<ITransport> get_transport();
+            
+    private:
+        std::unique_ptr<ITransport> transport_;
+        std::shared_ptr<ITransport> shared_transport_;
+    };
+    
+    // Response structure
+    struct Response {
+        int status_code;
+        std::string body;
+        std::unordered_map<std::string, std::string> headers;
+    };
+}
+```
+
+### ASIO Transport Implementation
+
+```cpp
+namespace keycloak::http {
+    class AsioTransport : public ITransport, public IProxyAware {
+    public:
+        AsioTransport();
+        Response send_request(
+            std::string_view host,
+            std::string_view port,
+            std::string_view method,
+            std::string_view path,
+            std::string_view body,
+            const std::unordered_map<std::string, std::string>& headers) override;
+            
+        void configure_proxy(const ProxyConfig& config) override;
+        
+    protected:
+        asio::io_context io_context_;
+        ProxyConfig proxy_config_;
+    };
+    
+    class AsioSecureTransport : 
+        public AsioTransport,
+        public ISecureTransport {
+    public:
+        AsioSecureTransport();
+        void configure_ssl(const SSLConfig& config) override;
+        
+    protected:
+        asio::ssl::context ssl_context_;
+        SSLConfig ssl_config_;
     };
 }
 ```
@@ -139,12 +216,63 @@ namespace keycloak::config {
         std::string realm;
         std::string client_id;
         std::vector<std::string> scopes;
-        SSLConfig ssl;
+        http::SSLConfig ssl;
+    };
+
+    struct PKCEConfig {
+        StateStoreConfig state_store;
+        CookieConfig cookies;
     };
 
     struct LibraryConfig {
         KeycloakConfig keycloak;
         PKCEConfig pkce;
+    };
+}
+
+namespace keycloak::http {
+    struct SSLConfig {
+        bool verify_peer = true;
+        std::string ca_cert_path;
+        std::string client_cert_path;
+        std::string client_key_path;
+    };
+    
+    struct ProxyConfig {
+        std::string host;
+        uint16_t port = 0;
+        
+        bool is_enabled() const {
+            return !host.empty() && port > 0;
+        }
+    };
+}
+```
+
+## Keycloak Client
+
+Provides high-level access to Keycloak server operations:
+
+```cpp
+namespace keycloak {
+    class KeycloakClient : public auth::ITokenService {
+    public:
+        static std::shared_ptr<KeycloakClient> create(
+            const config::KeycloakConfig& config,
+            std::shared_ptr<http::HttpClient> http_client = nullptr);
+            
+        // ITokenService implementation
+        std::string get_authorization_endpoint() const override;
+        auth::TokenResponse exchange_code(
+            std::string_view code,
+            std::string_view code_verifier,
+            std::string_view redirect_uri,
+            std::string_view client_id) override;
+        const std::vector<std::string>& get_scopes() const override;
+        
+    private:
+        const config::KeycloakConfig& config_;
+        std::shared_ptr<http::HttpClient> http_client_;
     };
 }
 ```
@@ -165,9 +293,44 @@ extern "C" {
         const char* code,
         const char* state,
         kc_pkce_token_info_t* token_info);
+        
+    KC_PKCE_API kc_pkce_error_t kc_pkce_set_ssl_config(
+        kc_pkce_config_t config,
+        const kc_pkce_ssl_config_t* ssl_config);
 }
 
 // Language bindings use this C API:
 // - Python via ctypes
 // - Lua via LuaJIT FFI
+```
+
+## Internal Wrappers
+
+C API implementation uses wrapper classes to bridge between C and C++:
+
+```cpp
+namespace keycloak::c_api {
+    class ConfigWrapper {
+    public:
+        void load_from_file(std::string_view path);
+        void set_keycloak_config(const kc_pkce_keycloak_config_t* config);
+        void set_ssl_config(const kc_pkce_ssl_config_t* ssl_config);
+        const config::LibraryConfig& get_config() const;
+        
+    private:
+        config::LibraryConfig config_;
+    };
+    
+    class PKCEWrapper {
+    public:
+        PKCEWrapper(const config::LibraryConfig& config);
+        std::string create_authorization_url(std::string_view redirect_uri);
+        kc_pkce_error_t handle_callback(const char* code, 
+                                       const char* state,
+                                       kc_pkce_token_info_t* token_info);
+        
+    private:
+        std::shared_ptr<auth::IAuthenticationStrategy> strategy_;
+    };
+}
 ```
