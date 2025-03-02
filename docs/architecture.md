@@ -112,14 +112,14 @@ keycloak::test::MockStateStore // Test implementation
 The HTTP layer follows a flexible, composable design pattern:
 
 ```plaintext
-┌───────────────────────────────────────────────────────┐
-│                     HttpClient                        │
-└───────────────────────┬───────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│                     HttpClient                   │
+└───────────────────────┬──────────────────────────┘
                         │
            ┌────────────┴───────────┐
            │                        │
-           │    <<Interface>>       │
-           │     ITransport         │
+           │      <<Interface>>     │
+           │       ITransport       │
            │                        │
            └────────────┬───────────┘
                         │
