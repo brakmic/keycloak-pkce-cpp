@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "keycloak/config/library_config.hpp"
 #include "keycloak/http/http_client.hpp"
+#include "keycloak/http/proxy_config.hpp"
 #include "mocks/auth/mock_auth_strategy.hpp"
 
 class StrategyTest : public ::testing::Test {
@@ -35,7 +36,7 @@ protected:
         return config;
     }
     
-    keycloak::http::HttpClient::ProxyConfig proxy_config;
+    keycloak::http::ProxyConfig proxy_config;
     keycloak::config::LibraryConfig config;
     keycloak::config::CookieConfig cookie_config;
     std::shared_ptr<keycloak::auth::IAuthenticationStrategy> strategy;
