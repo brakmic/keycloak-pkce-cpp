@@ -9,7 +9,7 @@
 #include "keycloak/utils/logging.hpp"
 
 
-namespace lg = logging;
+namespace lg = keycloak::logging;
 
 namespace app::routes {
 
