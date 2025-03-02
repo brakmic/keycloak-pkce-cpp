@@ -5,10 +5,26 @@
 #include "keycloak/auth/pkce_strategy.hpp"
 #include "keycloak/http/http_client.hpp"
 #include "keycloak/utils/url_encode.hpp"
+#include "keycloak/utils/logging.hpp"
 
 namespace keycloak {
 
 using json = nlohmann::json;
+using namespace keycloak::logging;
+
+// Helper function to convert config::SSLConfig to http::SSLConfig
+http::SSLConfig convert_ssl_config(const config::SSLConfig& config) {
+    http::SSLConfig http_config;
+    http_config.verify_peer = config.verify_peer;
+    http_config.ca_cert_path = config.ca_cert_path;
+
+    // Add verbose logging
+    Logger::debug("SSL Config: verify_peer={}, ca_cert_path=\"{}\"",
+        http_config.verify_peer,
+        http_config.ca_cert_path.empty() ? "<empty>" : http_config.ca_cert_path);
+
+    return http_config;
+}
 
 void KeycloakClient::init_endpoints() {
     auth_endpoint_ = "/realms/" + realm_ + "/protocol/openid-connect/auth";
@@ -28,44 +44,41 @@ TokenResponse KeycloakClient::exchange_code(
     std::string_view client_id)
 {
     TokenResponse result{};
-    
+
     try {
+        // Convert SSL config and create HTTP client
+        http::SSLConfig http_ssl_config = convert_ssl_config(ssl_config_);
+        auto http_client = http::HttpClient::create_https_client(http_ssl_config, proxy_config_);
+
         std::ostringstream body;
         body << "grant_type=authorization_code"
-                << "&client_id=" << url_encode(client_id)
-                << "&code=" << url_encode(code)
-                << "&redirect_uri=" << url_encode(redirect_uri)
-                << "&code_verifier=" << url_encode(code_verifier);
+             << "&client_id=" << url_encode(client_id)
+             << "&code=" << url_encode(code)
+             << "&redirect_uri=" << url_encode(redirect_uri)
+             << "&code_verifier=" << url_encode(code_verifier);
 
         log("debug", fmt::format("Token request details:\n"
-                                "- Endpoint: {}\n"
-                                "- Host: {}\n"
-                                "- Port: {}\n"
-                                "- Body: {}", 
-                                token_endpoint_, host_,
-                                std::to_string(port_), body.str()));
+                               "- Endpoint: {}\n"
+                               "- Host: {}\n"
+                               "- Port: {}\n"
+                               "- Body: {}",
+                               token_endpoint_, host_,
+                               std::to_string(port_), body.str()));
 
         std::unordered_map<std::string, std::string> headers;
         headers.emplace("Content-Type", "application/x-www-form-urlencoded");
         headers.emplace("Accept", "application/json");
 
-        // Convert config::SSLConfig to http::HttpClient::SSLConfig
-        http::HttpClient::SSLConfig http_ssl_config;
-        http_ssl_config.verify_peer = ssl_config_.verify_peer;
-        http_ssl_config.ca_cert_path = ssl_config_.ca_cert_path;
-
-        auto response = http::HttpClient::post(
+        auto response = http_client->post(
             host_, 
             std::to_string(port_),
             token_endpoint_, 
             body.str(), 
-            headers, 
-            http_ssl_config,
-            proxy_config_);
+            headers);
 
         log("debug", fmt::format("Token response:\n"
-                                "- Status: {}\n"
-                                "- Body: {}", response.status_code, response.body));
+                               "- Status: {}\n"
+                               "- Body: {}", response.status_code, response.body));
 
         if(response.status_code != 200) {
             try {
@@ -82,16 +95,10 @@ TokenResponse KeycloakClient::exchange_code(
 
         auto json_response = nlohmann::json::parse(response.body);
         
-        auto [access_token, refresh_token, id_token] = std::make_tuple(
-            json_response["access_token"].get<std::string>(),
-            json_response["refresh_token"].get<std::string>(),
-            json_response["id_token"].get<std::string>()
-        );
-
+        // Extract tokens from response
         result.access_token = json_response["access_token"].get<std::string>();
         result.refresh_token = json_response["refresh_token"].get<std::string>();
         result.id_token = json_response["id_token"].get<std::string>();
-
         result.token_type = json_response["token_type"].get<std::string>();
         result.expires_in = json_response["expires_in"].get<int>();
         result.refresh_expires_in = json_response["refresh_expires_in"].get<int>();
@@ -107,7 +114,7 @@ TokenResponse KeycloakClient::exchange_code(
 
 std::shared_ptr<auth::IAuthenticationStrategy> KeycloakClient::create_pkce_strategy(
     const config::LibraryConfig& config,
-    const http::HttpClient::ProxyConfig& proxy_config,
+    const http::ProxyConfig& proxy_config,
     std::string_view redirect_uri,
     LogCallback logger)
 {
