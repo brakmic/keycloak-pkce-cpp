@@ -30,7 +30,7 @@ A C++ library implementing OAuth2 PKCE (Proof Key for Code Exchange) authenticat
 ### 4. Technical Documentation
 - [Architecture Overview](./docs/architecture.md)
 - Security Considerations
-- API Reference
+- [API Reference](./docs/api_reference.md)
 - Configuration Reference
 - Error Handling
 
