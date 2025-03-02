@@ -17,7 +17,7 @@
  #include <unordered_map>
  #include <iostream>
  
- namespace logging {
+ namespace keycloak::logging {
  
 /**
  * @class Logger
