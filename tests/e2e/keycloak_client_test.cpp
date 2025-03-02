@@ -2,6 +2,7 @@
 #include <cpr/cpr.h>
 #include <regex>
 #include "keycloak/keycloak_client.hpp"
+#include "keycloak/http/proxy_config.hpp"
 
 class KeycloakClientE2ETest : public ::testing::Test {
 protected:
@@ -24,12 +25,32 @@ protected:
             config_, proxy_config_, redirect_uri_);
     }
 
+    // Parse callback URL helper method
+    std::pair<std::string, std::string> parse_callback_url(const std::string& url) {
+        std::regex code_regex("code=([^&]+)");
+        std::regex state_regex("state=([^&]+)");
+
+        std::smatch code_match, state_match;
+        std::string code, state;
+
+        if (std::regex_search(url, code_match, code_regex)) {
+            code = code_match[1];
+        }
+
+        if (std::regex_search(url, state_match, state_regex)) {
+            state = state_match[1];
+        }
+
+        return {code, state};
+    }
+
+    // Simulate user login helper method
     std::string simulate_user_login(const std::string& auth_url) {
         // Initialize session with SSL verification disabled for self-signed certs
         cpr::Session session;
         session.SetVerifySsl(false);
         session.SetUrl(cpr::Url{auth_url});
-        
+
         // First request to get login form
         auto r = session.Get();
         if (r.status_code != 200) {
@@ -51,32 +72,14 @@ protected:
             {"password", "password"},
             {"csrf", csrf_token}
         });
-        
+
         // Get the callback URL after successful login
         auto response = session.Post();
         if (response.status_code != 302) {
             return "";
         }
-        
+
         return response.header["location"];
-    }
-
-    std::pair<std::string, std::string> parse_callback_url(const std::string& url) {
-        std::regex code_regex("code=([^&]+)");
-        std::regex state_regex("state=([^&]+)");
-        
-        std::smatch code_match, state_match;
-        std::string code, state;
-
-        if (std::regex_search(url, code_match, code_regex)) {
-            code = code_match[1];
-        }
-        
-        if (std::regex_search(url, state_match, state_regex)) {
-            state = state_match[1];
-        }
-        
-        return {code, state};
     }
 
     void TearDown() override {
@@ -88,7 +91,7 @@ protected:
     }
 
     keycloak::config::LibraryConfig config_;
-    keycloak::http::HttpClient::ProxyConfig proxy_config_;
+    keycloak::http::ProxyConfig proxy_config_;
     std::string redirect_uri_;
     std::shared_ptr<keycloak::auth::IAuthenticationStrategy> strategy_;
 };
@@ -133,7 +136,7 @@ TEST_F(KeycloakClientE2ETest, InvalidLoginCredentials) {
     cpr::Session session;
     session.SetVerifySsl(false);
     session.SetUrl(cpr::Url{auth_url});
-    
+
     auto r = session.Get();
     ASSERT_EQ(r.status_code, 200);
 
@@ -141,7 +144,7 @@ TEST_F(KeycloakClientE2ETest, InvalidLoginCredentials) {
         {"username", "wrong-user"},
         {"password", "wrong-password"}
     });
-    
+
     auto response = session.Post();
     EXPECT_EQ(response.status_code, 401);
 }
