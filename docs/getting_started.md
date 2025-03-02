@@ -113,9 +113,9 @@ void handle_protected_resource(HttpRequest& req, HttpResponse& res) {
 
 The library provides C API bindings which are used to create Python and Lua integrations. See the respective integration guides for detailed usage:
 
-- [C API Integration Guide](./docs/c_integration.md)
-- [Python Integration Guide](./docs/python_integration.md)
-- [Lua Integration Guide](./docs/lua_integration.md)
+- [C API Integration Guide](./c_integration.md)
+- [Python Integration Guide](./python_integration.md)
+- [Lua Integration Guide](./lua_integration.md)
 
 ## Next Steps
 
