@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
 #include "keycloak/http/http_client.hpp"
+#include "keycloak/http/ssl_config.hpp"
+#include "keycloak/http/proxy_config.hpp"
 
 class HttpClientTest : public ::testing::Test {
 protected:
-    keycloak::http::HttpClient::SSLConfig ssl_config;
-    keycloak::http::HttpClient::ProxyConfig proxy_config;
+    keycloak::http::SSLConfig ssl_config;
+    keycloak::http::ProxyConfig proxy_config;
 };
 
 TEST_F(HttpClientTest, BasicPostRequest) {
