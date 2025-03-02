@@ -9,13 +9,16 @@ PKCEWrapper::PKCEWrapper(const config::LibraryConfig& config)
     : config_(config)
 {
     // Initialize proxy config from global settings
-    http::HttpClient::ProxyConfig proxy_config;
+    http::ProxyConfig proxy_config;
     const auto& proxy_settings = ProxySettings::instance();
     
     if (!proxy_settings.get_host().empty()) {
         proxy_config.host = proxy_settings.get_host();
         proxy_config.port = proxy_settings.get_port();
     }
+
+    // Store proxy config for later use
+    proxy_config_ = proxy_config;
 
     client_ = KeycloakClient::create(
         config_.keycloak,

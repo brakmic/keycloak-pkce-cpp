@@ -17,6 +17,7 @@
 #include "keycloak/auth/token_service.hpp"
 #include "keycloak/keycloak_client.hpp"
 #include "keycloak/config/library_config.hpp"
+#include "keycloak/http/proxy_config.hpp"
 
 namespace keycloak::c_api {
 
@@ -106,7 +107,7 @@ private:
     std::shared_ptr<auth::PKCEStrategy> strategy_;    ///< PKCE authentication strategy
     std::string redirect_uri_;                        ///< OAuth2 callback URL
     std::unordered_map<std::string, std::string> cookies_; ///< Cookie storage
-    http::HttpClient::ProxyConfig proxy_config_;      ///< Proxy configuration
+    http::ProxyConfig proxy_config_;                       ///< Proxy configuration
 };
 
 } // namespace keycloak::c_api
