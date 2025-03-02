@@ -7,8 +7,8 @@ The Keycloak PKCE library follows a layered architecture with clear separation o
 ```plaintext
 ┌─────────────────────────────────────────────────┐
 │              Language Bindings                  │
-│            Python (ctypes)                      │
-│            Lua (LuaJIT FFI)                     │
+│               Python (ctypes)                   │
+│               Lua (LuaJIT FFI)                  │
 ├─────────────────────────────────────────────────┤
 │                    C API                        │
 │            (kc_pkce.h Interface)                │
