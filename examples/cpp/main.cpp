@@ -36,7 +36,7 @@ namespace kc_auth = keycloak::auth;
 namespace kc_http = keycloak::http;
 namespace app_cfg = app::config;
 namespace kc_cfg = keycloak::config;
-namespace lg = logging;
+namespace lg = keycloak::logging;
 
 // Global instance
 crow::SimpleApp* p_app = nullptr;
@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
         app_cfg::ConfigLoader::validate_config(app_config);
 
         // Convert app proxy config to http client proxy config
-        kc_http::HttpClient::ProxyConfig http_proxy_config;
+        kc_http::ProxyConfig http_proxy_config;
         http_proxy_config.host = app_config.proxy.host;
         http_proxy_config.port = app_config.proxy.port;
 
