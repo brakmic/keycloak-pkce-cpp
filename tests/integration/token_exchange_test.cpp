@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "keycloak/keycloak_client.hpp"
 #include "keycloak/http/http_client.hpp"
+#include "keycloak/http/proxy_config.hpp"
 
 class TokenExchangeTest : public ::testing::Test {
 protected:
@@ -23,7 +24,7 @@ protected:
             config, proxy_config_, nullptr);
     }
 
-    keycloak::http::HttpClient::ProxyConfig proxy_config_;
+    keycloak::http::ProxyConfig proxy_config_;
     std::shared_ptr<keycloak::auth::ITokenService> token_service_;
 };
 
